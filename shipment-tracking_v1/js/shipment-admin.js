@@ -75,12 +75,8 @@ jQuery(document).ready(function($){
                 <input type="text" name="shipment_route[${index}][lat]" value="${lat}" readonly placeholder="Latitude" />
                 <input type="text" name="shipment_route[${index}][lng]" value="${lng}" readonly placeholder="Longitude" />
                 <select name="shipment_route[${index}][status]">
-                    <option value="Pending" ${status==='pending'?'selected':''}>Pending</option>
-                    <option value="Departure" ${status==='Departure'?'selected':''}>Departure</option>
-                    <option value="Shipped" ${status==='Shipped'?'selected':''}>Shipped</option>
-                     <option value="In Transit" ${status==='In Transit'?'selected':''}>In Transit</option>
-                     <option value="Delivered" ${status==='Delivered'?'selected':''}>Delivered</option>
-                    <option value="Done" ${status==='done'?'selected':''}>Done</option>
+                    <option value="pending" ${status==='pending'?'selected':''}>Pending</option>
+                    <option value="done" ${status==='done'?'selected':''}>Done</option>
                 </select>
                 <button type="button" class="remove-route-point button">Remove</button>
             </li>
