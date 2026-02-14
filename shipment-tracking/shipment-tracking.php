@@ -1,454 +1,375 @@
 <?php
 /**
- * Plugin Name: Shipment Manager
- * Description: Управление на shipment-и с интерактивна карта и точки.
- * Version: 1.0
- * Author: IVB
- * Text Domain: shipment-manager
+ * Plugin Name: Shipment Tracking – Real Route + City Points (OSM)
+ * Description: Shipment tracking with OpenStreetMap, OSRM routing and city markers
+ * Version: 1.3
  */
 
-if (!defined('ABSPATH')) {
-    exit;
+if (!defined('ABSPATH')) exit;
+
+/* -------------------------------------------------
+   1. REGISTER CPT
+------------------------------------------------- */
+add_action('init', function () {
+    register_post_type('shipment', [
+        'labels' => [
+            'name' => 'Shipments',
+            'singular_name' => 'Shipment',
+        ],
+        'public' => false,
+        'show_ui' => true,
+        'menu_icon' => 'dashicons-location-alt',
+        'supports' => ['title'],
+    ]);
+});
+
+/* -------------------------------------------------
+   2. META BOX
+------------------------------------------------- */
+add_action('add_meta_boxes', function () {
+    add_meta_box('shipment_details', 'Shipment Details', 'shipment_meta_box', 'shipment');
+});
+
+function shipment_meta_box($post) {
+    $tracking = get_post_meta($post->ID, 'tracking_number', true);
+    $route = get_post_meta($post->ID, 'route', true);
+    ?>
+    <p>
+        <label><strong>Shipping Number</strong></label><br>
+        <input type="text" name="tracking_number"
+               value="<?= esc_attr($tracking) ?>"
+               placeholder="#BG-0001"
+               style="width:100%">
+    </p>
+
+    <p>
+        <label><strong>Route (START → cities → END)</strong></label>
+        <textarea name="shipment_route" rows="5" style="width:100%"><?= esc_textarea($route) ?></textarea>
+        <small>
+            Example:<br>
+            [
+            [42.6977,23.3219],
+            [42.2666,23.4000],
+            [42.1354,24.7453],
+            [42.5048,27.4626]
+            ]
+        </small>
+    </p>
+    <?php
 }
 
-require_once plugin_dir_path(__FILE__) . 'includes/activation.php';
-require_once plugin_dir_path(__FILE__) . 'includes/shortcodes.php';
-require_once plugin_dir_path(__FILE__) . 'includes/admin-menu.php';
-require_once plugin_dir_path(__FILE__) . 'includes/demo-data.php';
+/* -------------------------------------------------
+   3. SAVE META
+------------------------------------------------- */
+add_action('save_post', function ($post_id) {
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
 
-
-
-// =======================
-// Frontend Scripts
-// =======================
-add_action('wp_enqueue_scripts', 'shipment_frontend_scripts');
-function shipment_frontend_scripts() {
-    // Leaflet CSS и JS
-    wp_enqueue_style('leaflet-css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
-    wp_enqueue_script('leaflet-js', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', [], null, true);
-
-    // Leaflet Routing Machine CSS и JS
-    wp_enqueue_style('leaflet-routing-machine-css', 'https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css');
-    wp_enqueue_script('leaflet-routing-machine-js', 'https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js', ['leaflet-js'], null, true);
-}
-
-class Shipment_Manager {
-    public function __construct() {
-        add_action('init', [$this, 'register_shipment_post_type']);
-        add_action('add_meta_boxes', [$this, 'add_shipment_meta_box']);
-        add_action('save_post', [$this, 'save_shipment_meta_box']);
-        add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
+    if (isset($_POST['tracking_number'])) {
+        update_post_meta($post_id, 'tracking_number', sanitize_text_field($_POST['tracking_number']));
     }
 
-    /**
-     * Registration custom post type 'shipment'
-     */
-    public function register_shipment_post_type() {
-        $labels = [
-            'name' => __('Shipments', 'shipment-manager'),
-            'singular_name' => __('Shipment', 'shipment-manager'),
-            'add_new' => __('Add Shipment', 'shipment-manager'),
-            'add_new_item' => __('Add New Shipment', 'shipment-manager'),
-            'edit_item' => __('Edit Shipment', 'shipment-manager'),
-            'new_item' => __('New Shipment', 'shipment-manager'),
-            'view_item' => __('View Shipment', 'shipment-manager'),
-            'search_items' => __('Search Shipments', 'shipment-manager'),
-            'not_found' => __('No shipments found', 'shipment-manager'),
-            'not_found_in_trash' => __('No shipments found in Trash', 'shipment-manager'),
-        ];
-
-        $args = [
-            'labels' => $labels,
-            'public' => true,
-            'has_archive' => true,
-            'show_in_rest' => true,
-            'supports' => ['title','thumbnail'],
-            'menu_position' => 5,
-            'menu_icon' => 'dashicons-location-alt',
-        ];
-
-        register_post_type('shipment', $args);
+    if (isset($_POST['shipment_route'])) {
+        update_post_meta($post_id, 'route', wp_kses_post($_POST['shipment_route']));
     }
+});
 
-    /**
-     * Add Meta Box about the routes
-     */
-    public function add_shipment_meta_box() {
-        add_meta_box(
-            'shipment_route_meta',
-            __('Shipment Route', 'shipment-manager'),
-            [$this, 'render_shipment_meta_box'],
-            'shipment',
-            'normal',
-            'high'
-        );
-    }
+/* -------------------------------------------------
+   4. FRONTEND ASSETS
+------------------------------------------------- */
+add_action('wp_enqueue_scripts', function () {
 
-    /**
-     * Renders Meta Box
-     */
-    public function render_shipment_meta_box($post) {
-        wp_nonce_field('save_shipment_route', 'shipment_route_nonce');
+    wp_enqueue_style('leaflet-css',
+        'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+    );
 
-        $route_points = get_post_meta($post->ID, '_shipment_route_points', true);
-        if (!$route_points) {
-            $route_points = [];
+    wp_enqueue_script('leaflet-js',
+        'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+        [],
+        null,
+        true
+    );
+
+    wp_add_inline_style('leaflet-css', '
+        #map{height:450px;border-radius:14px;margin-top:15px}
+        .shipment-wrapper{max-width:900px}
+        input,button{padding:8px}
+
+        .start-marker,.end-marker,.city-marker{
+            width:22px;height:22px;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            font-size:12px;font-weight:bold;color:#fff
         }
-        ?>
+        .start-marker{background:#28a745}
+        .end-marker{background:#dc3545}
+        .city-marker{background:#0d6efd}
+    ');
 
-            <div id="shipment-route-container">
-            <button type="button" id="add-route-point" class="button"><?php _e('Add Point', 'shipment-manager'); ?></button>
-            <ul id="route-points-list">
-                <?php
+    wp_add_inline_script('leaflet-js', '
+    document.addEventListener("DOMContentLoaded", function () {
 
-                foreach ($route_points as $index => $point): ?>
-                    <li class="route-point-item" data-index="<?php echo esc_attr($index); ?>">
-                        <input type="text" name="shipment_route[<?php echo $index; ?>][city]" value="<?php echo esc_attr($point['city']); ?>" placeholder="City" />
-                        <input type="text" name="shipment_route[<?php echo $index; ?>][address]" value="<?php echo esc_attr($point['address']); ?>" placeholder="Address" />
-                        <input type="datetime-local" name="shipment_route[<?php echo $index; ?>][datetime]" value="<?php echo esc_attr($point['datetime']); ?>" />
-                        <input type="text" name="shipment_route[<?php echo $index; ?>][lat]" value="<?php echo esc_attr($point['lat']); ?>" placeholder="Latitude" />
-                        <input type="text" name="shipment_route[<?php echo $index; ?>][lng]" value="<?php echo esc_attr($point['lng']); ?>" placeholder="Longitude" />
-                        <select name="shipment_route[<?php echo $index; ?>][status]">
-                            <option value="Departure" <?php selected($point['status'], 'Departure'); ?>>Departure</option>
-                            <option value="Pending" <?php selected($point['status'], 'Pending'); ?>>Pending</option>
-                            <option value="Shipped" <?php selected($point['status'], 'Shipped'); ?>>Shipped</option>
-                            <option value="In Transit" <?php selected($point['status'], 'In Transit'); ?>>In Transit</option>
-                            <option value="Delivered" <?php selected($point['status'], 'Delivered'); ?>>Delivered</option>
-                            <option value="Done" <?php selected($point['status'], 'Done'); ?>>Done</option>
-                        </select>
-                        <button type="button" class="remove-route-point button">Remove</button>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
+        const map = L.map("map").setView([42.7, 23.3], 7);
 
-        </div>
-        <div class="two-columns">
-            <div class="left-column">
-                <div id="shipment-map" style="width: 100%; height: 460px; margin-top: 15px;"></div>
-            </div>
-            <div class="right-column">
-                    <p>
-                        <label><?php _e('Tracking Number', 'shipment-manager'); ?></label><br/>
-                        <input type="text" name="shipment_tracking_number" value="<?php echo esc_attr(get_post_meta($post->ID, '_shipment_tracking_number', true)); ?>" style="width:100%;" />
-                    </p>
-                    <p>
-                        <label><?php _e('Status', 'shipment-manager'); ?></label><br/>
-                        <select name="shipment_status">
-                            <?php
-                            $current_status = get_post_meta($post->ID, '_shipment_status', true);
-                            $statuses = ['Pending','Shipped','In Transit','Delivered'];
-                            foreach($statuses as $s): ?>
-                                <option value="<?php echo esc_attr($s); ?>" <?php selected($current_status, $s); ?>><?php echo esc_html($s); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </p>
-                    <p>
-                        <label><?php _e('Total Time', 'shipment-manager'); ?></label><br/>
-                        <input type="text" name="total_time" value="<?php echo esc_attr(get_post_meta($post->ID, '_total_time', true)); ?>" style="width:100%;" />
-                    </p>
-                    <p>
-                        <label><?php _e('Courier Name', 'shipment-manager'); ?></label><br/>
-                        <input type="text" name="courier_name" value="<?php echo esc_attr(get_post_meta($post->ID, '_courier_name', true)); ?>" style="width:100%;" />
-                    </p>
-                    <p>
-                        <label><?php _e('Courier Phone', 'shipment-manager'); ?></label><br/>
-                        <input type="text" name="courier_phone" value="<?php echo esc_attr(get_post_meta($post->ID, '_courier_phone', true)); ?>" style="width:100%;" />
-                    </p>
-                    <p>
-                        <label><?php _e('Courier Message', 'shipment-manager'); ?></label><br/>
-                        <textarea name="courier_message" rows="3" style="width:100%;"><?php echo esc_textarea(get_post_meta($post->ID, '_courier_message', true)); ?></textarea>
-                    </p>
-            </div>
-        </div>
-<style>
-    .leaflet-routing-container {
-        display:none;
-    }
-    .two-columns {
-        display: flex;
-            }
-
-    .left-column {
-        flex: 2;
-        background: #f3f4f6;
-        padding: 10px 20px 0 0;
-    }
-
-    .right-column {
-        flex: 1;
-        background: #e5e7eb;
-        padding: 20px;
-    }
-
-    @media (max-width: 768px) {
-        .two-columns {
-            flex-direction: column;
-        }
-    }
-
-    #shipment-route-container {
-        background: #e5e7eb;
-        padding: 20px;
-    }
-
-</style>
-        <?php
-    }
-    /**
-     * Save Meta Box
-     */
-    public function save_shipment_meta_box($post_id) {
-        if (!isset($_POST['shipment_route_nonce']) || !wp_verify_nonce($_POST['shipment_route_nonce'], 'save_shipment_route')) {
-            return;
-        }
-        if (
-            !isset($_POST['shipment_route_nonce']) ||
-            !wp_verify_nonce($_POST['shipment_route_nonce'], 'save_shipment_route')
-        ) {
-            return;
-        }
-        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
-        if (!current_user_can('edit_post', $post_id)) return;
-
-        $route_data = $_POST['shipment_route'] ?? [];
-        $clean_data = [];
-
-        foreach ($route_data as $point) {
-            // Skip empty cities/addresses
-            if (empty($point['city']) && empty($point['address'])) continue;
-
-            $clean_data[] = [
-                'city' => sanitize_text_field($point['city']),
-                'address' => sanitize_text_field($point['address']),
-                'datetime' => sanitize_text_field($point['datetime']),
-                'lat' => floatval($point['lat']),
-                'lng' => floatval($point['lng']),
-                'status' => sanitize_text_field($point['status']),
-            ];
-        }
-        $existing_tracking = get_post_meta($post_id, '_shipment_tracking_number', true);
-        if (empty($existing_tracking)) {
-            $tracking_number = 'SHPMT-' . $post_id . '-' . wp_rand(1000, 9999);
-            update_post_meta($post_id, '_shipment_tracking_number', $tracking_number);
-
-            update_post_meta($post_id, '_shipment_tracking_number', $tracking_number);
-        }
-
-        update_post_meta($post_id, '_shipment_route_points', $clean_data);
-        update_post_meta($post_id, '_shipment_status', sanitize_text_field($_POST['shipment_status'] ?? 'Pending'));
-        update_post_meta($post_id, '_total_time', sanitize_text_field($_POST['total_time'] ?? ''));
-        update_post_meta($post_id, '_courier_name', sanitize_text_field($_POST['courier_name'] ?? ''));
-        update_post_meta($post_id, '_courier_phone', sanitize_text_field($_POST['courier_phone'] ?? ''));
-        update_post_meta($post_id, '_courier_message', sanitize_textarea_field($_POST['courier_message'] ?? ''));
-
-    }
-    /**
-     * Loads scripts and styles for admin
-     */
-    public function enqueue_admin_scripts($hook) {
-        global $post_type;
-        if ($post_type !== 'shipment') return;
-
-        // Leaflet CSS & JS
-        wp_enqueue_style('leaflet-css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
-        wp_enqueue_script('leaflet-js', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', [], null, true);
-
-        wp_enqueue_style('leaflet-routing-machine-css', 'https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css');
-        wp_enqueue_script('leaflet-routing-machine-js', 'https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js', ['leaflet-js'], null, true);
-
-        // Custom admin JS
-        wp_enqueue_script('shipment-admin-js', plugin_dir_url(__FILE__) . 'js/shipment-admin.js', ['jquery', 'leaflet-js'], null, true);
-    }
-}
-
-new Shipment_Manager();
-
-add_shortcode('shipment_tracking', 'shipment_tracking_shortcode');
-function shipment_tracking_shortcode($atts) {
-    $atts = shortcode_atts(['id' => 0], $atts, 'shipment_tracking');
-    $post_id = intval($atts['id']);
-    if (!$post_id) return 'Shipment not found.';
-
-    $route_points = get_post_meta($post_id, '_shipment_route_points', true) ?: [];
-    $tracking_number = get_post_meta($post_id, '_shipment_tracking_number', true);
-    $status = get_post_meta($post_id, '_shipment_status', true);
-    $total_time = get_post_meta($post_id, '_total_time', true);
-    $courier_name = get_post_meta($post_id, '_courier_name', true);
-    $courier_phone = get_post_meta($post_id, '_courier_phone', true);
-    $courier_message = get_post_meta($post_id, '_courier_message', true);
-
-    // Preparing a JS array for the route
-    $route_json = json_encode($route_points);
-
-    ob_start(); ?>
-    <div class="shipment-tracking-container">
-        <h3>Shipment #<?php echo esc_html($tracking_number); ?> - Status: <?php echo esc_html($status); ?></h3>
-        <p><strong>Courier:</strong> <?php echo esc_html($courier_name); ?> | <strong>Phone:</strong> <?php echo esc_html($courier_phone); ?></p>
-        <p><strong>Message:</strong> <?php echo esc_html($courier_message); ?></p>
-
-        <div id="shipment-map-frontend" style="width:100%; height:400px; margin-bottom:15px;"></div>
-
-        <ul id="shipment-timeline">
-            <?php foreach ($route_points as $point): ?>
-                <li>
-                    <strong><?php echo esc_html($point['city']); ?></strong> - <?php echo esc_html($point['address']); ?>
-                    <br/>
-                    <?php echo esc_html($point['datetime']); ?> | Status: <?php echo esc_html($point['status']); ?>
-                </li>
-            <?php endforeach; ?>
-        </ul>
-    </div>
-
-    <script>
-      document.addEventListener('DOMContentLoaded', function(){
-        const routePoints = <?php echo $route_json; ?>;
-
-        const map = L.map('shipment-map-frontend').setView([42.7, 23.3], 7);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors'
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; OpenStreetMap"
         }).addTo(map);
 
-        const waypoints = [];
-
-        routePoints.forEach(pt => {
-          if (pt.lat && pt.lng) {
-            waypoints.push(L.latLng(pt.lat, pt.lng));
-            L.marker([pt.lat, pt.lng]).addTo(map)
-              .bindPopup(`<strong>${pt.city}</strong><br>${pt.address}<br>${pt.datetime}<br>Status: ${pt.status}`);
-          }
+        const startIcon = L.divIcon({
+            html: "<div class=\"start-marker\">✔</div>",
+            className: "",
+            iconSize: [22,22]
         });
 
-        if (waypoints.length > 1) {
-          L.Routing.control({
-            waypoints: waypoints,
-            routeWhileDragging: false,
-            draggableWaypoints: false,
-            addWaypoints: false,
-            lineOptions: {
-              styles: [{color: 'blue', opacity: 0.7, weight: 5}]
-            },
-            createMarker: function() { return null; } // вече имаме свои маркери
-          }).addTo(map);
-        } else if (waypoints.length === 1) {
-          map.setView(waypoints[0], 10);
-        }
-      });
+        const endIcon = L.divIcon({
+            html: "<div class=\"end-marker\">📦</div>",
+            className: "",
+            iconSize: [22,22]
+        });
 
-    </script>
+        const cityIcon = L.divIcon({
+            html: "<div class=\"city-marker\">●</div>",
+            className: "",
+            iconSize: [18,18]
+        });
+
+        let layers = [];
+        let cityMarkers = [];
+        let currentCityIndex = 0;
+        let truck = null;
+        let animIndex = 0;
+        let animTimer = null;
+
+        document.getElementById("track-btn").onclick = function () {
+
+            const code = document.getElementById("shipping-id").value.trim();
+
+            fetch("' . admin_url('admin-ajax.php') . '?action=get_shipment&shipping_id=" + encodeURIComponent(code))
+                .then(r => r.json())
+                .then(res => {
+
+                    layers.forEach(l => map.removeLayer(l));
+                    layers = [];
+
+                    if (!res.success) {
+                        alert("Shipment not found");
+                        return;
+                    }
+
+                    const route = res.data.route;
+
+                    // OSRM – real route via ALL points
+                    const coords = route.map(p => p[1] + "," + p[0]).join(";");
+
+                    const osrmUrl =
+                        "https://router.project-osrm.org/route/v1/driving/" +
+                        coords +
+                        "?overview=full&geometries=geojson";
+
+                    fetch(osrmUrl)
+                        .then(r => r.json())
+                        .then(osrm => {
+
+                            if (!osrm.routes || !osrm.routes.length) {
+                                alert("Route not found");
+                                return;
+                            }
+
+                            const realRoute = osrm.routes[0].geometry.coordinates
+                                .map(c => [c[1], c[0]]);
+                                
+                             // ETA + KM
+                            const km = (osrm.routes[0].distance / 1000).toFixed(1);
+                            const min = Math.round(osrm.routes[0].duration / 60);
+                            
+                            document.getElementById("km").innerText = km;
+                            document.getElementById("eta").innerText = min;
+                            
+                            // REMOVE OLD TRUCK
+                            if (truck) {
+                                map.removeLayer(truck);
+                                clearTimeout(animTimer);
+                            }
+                            
+                            // CREATE TRUCK
+                            truck = L.marker(realRoute[0], {
+                                icon: L.divIcon({
+                                    html: "🚚",
+                                    className: "",
+                                    iconSize: [30,30]
+                                })
+                            }).addTo(map);
+                            
+                            animIndex = 0;
+                            
+                            // ANIMATION FUNCTION
+                            /*function animateTruck() {
+                                if (animIndex >= realRoute.length) return;
+                                truck.setLatLng(realRoute[animIndex]);
+                                animIndex++;
+                                animTimer = setTimeout(animateTruck, 120);
+                            }*/
+                            function animateTruck() {
+                            if (animIndex >= realRoute.length) return;
+                        
+                            truck.setLatLng(realRoute[animIndex]);
+                        
+                            // progress % по маршрута
+                            const progress = animIndex / realRoute.length;
+                            const cityStep = Math.floor(progress * (cityMarkers.length - 1));
+                        
+                            if (cityStep !== currentCityIndex) {
+                                currentCityIndex = cityStep;
+                        
+                                cityMarkers.forEach((m, i) => {
+                                    if (i < currentCityIndex) {
+                                        m.setPopupContent("✅ Arrived");
+                                    } else if (i === currentCityIndex) {
+                                        m.setPopupContent("🚚 In transit");
+                                        m.openPopup();
+                                    } else {
+                                        m.setPopupContent("📍 Next stop");
+                                    }
+                                });
+                            }
+                        
+                            animIndex++;
+                            animTimer = setTimeout(animateTruck, 120);
+                        }
+
+                            
+                            animateTruck();
+
+
+                            const line = L.polyline(realRoute, {
+                                color: "#3b5bfd",
+                                weight: 5
+                            }).addTo(map);
+
+                            layers.push(line);
+
+                           /* // START
+                            layers.push(
+                                L.marker(route[0], {icon: startIcon}).addTo(map)
+                            );
+
+                            // CITY WAYPOINTS
+                            for (let i = 1; i < route.length - 1; i++) {
+                                layers.push(
+                                    L.marker(route[i], {icon: cityIcon}).addTo(map)
+                                );
+                            }
+
+                            // END
+                            layers.push(
+                                L.marker(route[route.length - 1], {icon: endIcon}).addTo(map)
+                            );*/
+                            
+                            cityMarkers = [];
+                            currentCityIndex = 0;
+                            
+                            // START
+                            const startMarker = L.marker(route[0], {icon: startIcon})
+                                .bindPopup("🚚 Departed from start")
+                                .addTo(map);
+                            
+                            cityMarkers.push(startMarker);
+                            layers.push(startMarker);
+                            
+                            // WAYPOINTS
+                            for (let i = 1; i < route.length - 1; i++) {
+                                const m = L.marker(route[i], {icon: cityIcon})
+                                    .bindPopup("📍 Next stop")
+                                    .addTo(map);
+                            
+                                cityMarkers.push(m);
+                                layers.push(m);
+                            }
+                            
+                            // END
+                            const endMarker = L.marker(route[route.length - 1], {icon: endIcon})
+                                .bindPopup("📦 Destination")
+                                .addTo(map);
+                            
+                            cityMarkers.push(endMarker);
+                            layers.push(endMarker);
+
+
+                            map.fitBounds(line.getBounds());
+                        });
+                });
+        };
+    });
+    ');
+});
+
+/* -------------------------------------------------
+   5. SHORTCODE
+------------------------------------------------- */
+add_shortcode('shipment_tracking', function () {
+    ob_start();
+
+    $args = array(
+        'post_type'      => 'shipment',
+        'posts_per_page' => -1,
+        'fields'         => 'ids', // 👈 only return IDs
+    );
+
+    $query = new WP_Query($args);
+
+    if ($query->have_posts()) {
+        foreach ($query->posts as $post_id) {
+
+            $tracking = get_post_meta($post_id, 'tracking_number', true);
+            echo $tracking . '<br>';
+        }
+    }
+    //
+    ?>
+
+    <div class="shipment-wrapper">
+        <input type="text" id="shipping-id" placeholder="Enter Shipping Number">
+        <button id="track-btn">Track</button>
+
+        <div id="eta-panel" style="margin-top:10px;font-weight:bold">
+            Distance: <span id="km">–</span> km |
+            ETA: <span id="eta">–</span> min
+        </div>
+
+        <div id="map"></div>
+    </div>
+
     <?php
     return ob_get_clean();
-}
+});
 
+/* -------------------------------------------------
+   6. AJAX – SEARCH BY SHIPPING NUMBER
+------------------------------------------------- */
+add_action('wp_ajax_get_shipment', 'get_shipment');
+add_action('wp_ajax_nopriv_get_shipment', 'get_shipment');
 
-add_action('wp_ajax_shipment_search', 'shipment_search_ajax');
-add_action('wp_ajax_nopriv_shipment_search', 'shipment_search_ajax');
+function get_shipment() {
 
-function shipment_search_ajax() {
-    $tracking_number = sanitize_text_field($_GET['tracking_number'] ?? '');
-    if(!$tracking_number){
-        wp_send_json(['success'=>false]);
-    }
+    $tracking = sanitize_text_field($_GET['shipping_id'] ?? '');
 
-    $args = [
-        'post_type'=>'shipment',
-        'meta_query'=>[
+    $q = new WP_Query([
+        'post_type' => 'shipment',
+        'posts_per_page' => 1,
+        'meta_query' => [
             [
-                'key'=>'_shipment_tracking_number',
-                'value'=>$tracking_number,
-                'compare'=>'='
+                'key' => 'tracking_number',
+                'value' => $tracking,
+                'compare' => '='
             ]
-        ],
-        'posts_per_page'=>1
-    ];
-    $query = new WP_Query($args);
-    if(!$query->have_posts()){
-        wp_send_json(['success'=>false]);
+        ]
+    ]);
+
+    if (!$q->have_posts()) {
+        wp_send_json_error();
     }
 
-    $post = $query->posts[0];
-    $route_points = get_post_meta($post->ID, '_shipment_route_points', true) ?: [];
+    $post = $q->posts[0];
 
-
-    wp_send_json([
-        'success'=>true,
-        'route_points'=>$route_points,
-        'tracking_number' => get_post_meta($post->ID,'_shipment_tracking_number',true),
-        'status' => get_post_meta($post->ID,'_shipment_status',true),
-        'courier_name' => get_post_meta($post->ID,'_courier_name',true),
-        'courier_phone' => get_post_meta($post->ID,'_courier_phone',true),
-        'courier_message' => get_post_meta($post->ID,'_courier_message',true)
+    wp_send_json_success([
+        'route' => json_decode(get_post_meta($post->ID, 'route', true))
     ]);
 }
-
-
-add_filter('template_include', 'shipment_load_single_template');
-function shipment_load_single_template($template) {
-
-    if (is_singular('shipment')) {
-
-        $plugin_template = plugin_dir_path(__FILE__) . 'templates/single-shipment.php';
-
-        if (file_exists($plugin_template)) {
-            return $plugin_template;
-        }
-    }
-
-    return $template;
-}
-
-add_action('wp_enqueue_scripts', 'shipment_enqueue_frontend_assets');
-function shipment_enqueue_frontend_assets() {
-
-    // We only charge if we are in single shipment OR if there is a shortcode
-    if ( is_singular('shipment') || is_page() ) {
-
-        wp_enqueue_style(
-            'leaflet-css',
-            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-            [],
-            '1.9.4'
-        );
-
-        wp_enqueue_script(
-            'leaflet-js',
-            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-            [],
-            '1.9.4',
-            true
-        );
-
-        wp_enqueue_style(
-            'leaflet-routing-css',
-            'https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css',
-            [],
-            '3.2.12'
-        );
-
-        wp_enqueue_script(
-            'leaflet-routing-js',
-            'https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js',
-            ['leaflet-js'],
-            '3.2.12',
-            true
-        );
-    }
-    wp_localize_script(
-        'shipment-frontend',
-        'shipment_data',
-        [
-            'plugin_url' => plugin_dir_url(__FILE__)
-        ]
-    );
-
-}
-
-add_action('wp_enqueue_scripts', function() {
-
-    wp_enqueue_style(
-        'shipment-css',
-        plugin_dir_url(__FILE__) . 'css/shipment.css',
-        [],
-        '1.0'
-    );
-
-});
