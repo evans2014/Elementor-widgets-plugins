@@ -3,7 +3,7 @@
  * Plugin Name: Shipment Manager
  * Description: Управление на shipment-и с интерактивна карта и точки.
  * Version: 1.0
- * Author: Your Name
+ * Author: IVB
  * Text Domain: shipment-manager
  */
 
