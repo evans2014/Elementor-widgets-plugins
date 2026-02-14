@@ -13,11 +13,11 @@ $courier_phone = get_post_meta($post->ID,'_courier_phone',true);
 $courier_message = get_post_meta($post->ID,'_courier_message',true);
 ?>
 
-<div style="display:flex; gap:30px; max-width:1400px; margin:40px auto;">
-    <div style="flex:2;">
+<div class="shipment-main" >
+    <div class="shipment-column-left" >
         <div id="shipment-map" style="height:900px; width:100%;"></div>
     </div>
-    <div style="flex:1;">
+    <div class="shipment-column-right" >
         <h4>Shipment Information</h4>
         <div><strong>Tracking Number:</strong> <?php echo esc_html($tracking_number); ?></div>
         <div><strong>Status:</strong> <?php echo esc_html($status); ?></div>
@@ -38,7 +38,6 @@ $courier_message = get_post_meta($post->ID,'_courier_message',true);
                         </div>
                         <div class="timeline-address"><?php echo esc_html($point['address']); ?></div>
                         <div class="timeline-address"><?php echo esc_html($point['status']); ?></div>
-
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -69,12 +68,21 @@ $courier_message = get_post_meta($post->ID,'_courier_message',true);
     routePoints.forEach(point => {
       if (!point.lat || !point.lng) return;
 
+      const formattedDate = new Date(point.datetime).toLocaleString('en-US', {
+        month: 'numeric',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+
       L.marker([parseFloat(point.lat), parseFloat(point.lng)])
         .addTo(map)
         .bindPopup(`
           <strong>${point.city}</strong><br>
-          ${point.address}<br>
-          ${new Date(point.datetime).toLocaleString()}<br>
+          ${point.address ? point.address + '<br>' : ''}
+          ${formattedDate}<br>
           ${point.status ?? ''}
         `);
     });
@@ -136,12 +144,10 @@ $courier_message = get_post_meta($post->ID,'_courier_message',true);
       }, 80);
     });
 
-
      setTimeout(() => {
        const routingDiv = document.querySelector('.leaflet-routing-container');
        if(routingDiv) routingDiv.style.display = 'none';
      }, 100);
-
 
      // Toggle button for the right box
      const toggleRoutingBtn = L.control({position: 'topright'});
@@ -183,7 +189,6 @@ $courier_message = get_post_meta($post->ID,'_courier_message',true);
      timelineBtn.addEventListener('click', () => {
        const isHidden = window.getComputedStyle(timeline).display === 'none';
        timeline.style.display = isHidden ? 'block' : 'none';
-
      });
 
   });

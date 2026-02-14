@@ -3,6 +3,17 @@
     margin-top: 15px;
     border-radius: 12px;
 }
+.shipment-main {
+    display:flex; gap:30px; max-width:1400px; margin:40px auto;
+}
+
+.shipment-column-left {
+    flex:2;
+}
+
+.shipment-column-right {
+    flex:1;
+}
 
 .shipment-wrapper {
     max-width: 900px;

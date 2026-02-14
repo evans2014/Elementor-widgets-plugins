@@ -910,7 +910,7 @@ add_filter('admin_footer_text', function($text) {
     $screen = get_current_screen();
 
     if ($screen && $screen->post_type === 'shipment') {
-        return ''; 
+        return '';
     }
 
     return $text;
