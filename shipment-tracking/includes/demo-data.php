@@ -1,8 +1,6 @@
 <?php
 
-// ======================================
 // Създаване на DEMO DATA
-// ======================================
 
 function shipment_install_demo() {
 
@@ -10,9 +8,7 @@ function shipment_install_demo() {
         return;
     }
 
-    // ==========================
     // Shipment 1
-    // ==========================
 
     $shipment1 = wp_insert_post([
         'post_title'  => 'Shipment Sofia → Plovdiv',
@@ -52,9 +48,7 @@ function shipment_install_demo() {
         update_post_meta($shipment1, '_courier_message', 'Expected delivery today.');
     }
 
-    // ==========================
     // Shipment 2
-    // ==========================
 
     $shipment2 = wp_insert_post([
         'post_title'  => 'Shipment Prague → Paris',

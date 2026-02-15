@@ -23,6 +23,8 @@ require_once plugin_dir_path(__FILE__) . 'includes/demo-data.php';
 // =======================
 add_action('wp_enqueue_scripts', 'shipment_frontend_scripts');
 function shipment_frontend_scripts() {
+
+    wp_enqueue_style('shipment-css',plugin_dir_url(__FILE__) . 'css/shipment.css',[], '1.0' );
     // Leaflet CSS и JS
     wp_enqueue_style('leaflet-css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
     wp_enqueue_script('leaflet-js', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', [], null, true);
@@ -161,35 +163,14 @@ class Shipment_Manager {
             </div>
         </div>
 <style>
-    .leaflet-routing-container {
-        display:none;
-    }
-    .two-columns {
-        display: flex;
-            }
-
-    .left-column {
-        flex: 2;
-        background: #f3f4f6;
-        padding: 10px 20px 0 0;
-    }
-
-    .right-column {
-        flex: 1;
-        background: #e5e7eb;
-        padding: 20px;
-    }
-
+    .leaflet-routing-container { display:none; }
+    .two-columns { display: flex; }
+    .left-column { flex: 2; background: #f3f4f6; padding: 10px 20px 0 0; }
+    .right-column { flex: 1; background: #e5e7eb; padding: 20px; }
     @media (max-width: 768px) {
-        .two-columns {
-            flex-direction: column;
-        }
+        .two-columns { flex-direction: column; }
     }
-
-    #shipment-route-container {
-        background: #e5e7eb;
-        padding: 20px;
-    }
+    #shipment-route-container { background: #e5e7eb; padding: 20px; }
 
 </style>
         <?php
@@ -339,7 +320,6 @@ function shipment_tracking_shortcode($atts) {
     return ob_get_clean();
 }
 
-
 add_action('wp_ajax_shipment_search', 'shipment_search_ajax');
 add_action('wp_ajax_nopriv_shipment_search', 'shipment_search_ajax');
 
@@ -402,53 +382,11 @@ function shipment_enqueue_frontend_assets() {
     // We only charge if we are in single shipment OR if there is a shortcode
     if ( is_singular('shipment') || is_page() ) {
 
-        wp_enqueue_style(
-            'leaflet-css',
-            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-            [],
-            '1.9.4'
-        );
-
-        wp_enqueue_script(
-            'leaflet-js',
-            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-            [],
-            '1.9.4',
-            true
-        );
-
-        wp_enqueue_style(
-            'leaflet-routing-css',
-            'https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css',
-            [],
-            '3.2.12'
-        );
-
-        wp_enqueue_script(
-            'leaflet-routing-js',
-            'https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js',
-            ['leaflet-js'],
-            '3.2.12',
-            true
-        );
+        wp_enqueue_style( 'leaflet-css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', [], '1.9.4' );
+        wp_enqueue_script( 'leaflet-js', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', [], '1.9.4', true );
+        wp_enqueue_style( 'leaflet-routing-css', 'https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css', [], '3.2.12' );
+        wp_enqueue_script( 'leaflet-routing-js', 'https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js', ['leaflet-js'], '3.2.12', true );
     }
-    wp_localize_script(
-        'shipment-frontend',
-        'shipment_data',
-        [
-            'plugin_url' => plugin_dir_url(__FILE__)
-        ]
-    );
+    wp_localize_script( 'shipment-frontend', 'shipment_data', [ 'plugin_url' => plugin_dir_url(__FILE__) ] );
 
 }
-
-add_action('wp_enqueue_scripts', function() {
-
-    wp_enqueue_style(
-        'shipment-css',
-        plugin_dir_url(__FILE__) . 'css/shipment.css',
-        [],
-        '1.0'
-    );
-
-});

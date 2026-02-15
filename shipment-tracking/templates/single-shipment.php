@@ -8,6 +8,7 @@ global $post;
 $route_points = get_post_meta($post->ID, '_shipment_route_points', true) ?: [];
 $tracking_number = get_post_meta($post->ID,'_shipment_tracking_number',true);
 $status = get_post_meta($post->ID,'_shipment_status',true);
+$total_time = get_post_meta($post->ID, '_total_time', true);
 $courier_name = get_post_meta($post->ID,'_courier_name',true);
 $courier_phone = get_post_meta($post->ID,'_courier_phone',true);
 $courier_message = get_post_meta($post->ID,'_courier_message',true);
@@ -26,7 +27,45 @@ $courier_message = get_post_meta($post->ID,'_courier_message',true);
         <div><strong>Message:</strong> <?php echo esc_html($courier_message); ?></div>
         <hr>
         <div id="route-summary"></div>
+        <h5>Detail</h5>
+        <?php
+        $total_points = count($route_points);
+
+        if ($total_points > 0) {
+
+            $first_point = $route_points[0];
+            $last_point  = $route_points[$total_points - 1];
+            ?>
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <div style="flex:1;">
+                    <label><b>Total Time</b></label>
+                    <div><?php echo esc_html($total_time); ?></div>
+                </div>
+                <?php
+                $date1=strtotime($first_point['datetime']);
+                $date2=strtotime($last_point['datetime']);
+                $diff = abs($date2 - $date1);
+
+                $days = floor($diff / (60 * 60 * 24));
+                $hours = floor(($diff % (60 * 60 * 24)) / (60 * 60));
+                $minutes = floor(($diff % (60 * 60)) / 60);
+                //echo $days." дни, $hours часа и $minutes минути";
+                ?>
+                <div style="flex:1;">
+                    <label><b>Departure Тime</b></label>
+                    <div><?php echo date('j-m-y H:i', strtotime($first_point['datetime'])); ?></div>
+                </div>
+                <div style="flex:1;">
+                    <label><b>Arrival Time</b></label>
+                    <div><?php echo date('j-m-y H:i', strtotime($last_point['datetime'])); ?></div>
+                </div>
+
+            </div>
+            <?php
+        }
+        ?>
         <h5>Timeline</h5>
+
         <div class="timeline">
             <?php foreach($route_points as $point): ?>
                 <div class="timeline-item">

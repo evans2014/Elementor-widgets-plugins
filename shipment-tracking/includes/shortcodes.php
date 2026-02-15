@@ -143,7 +143,7 @@ add_shortcode('shipment_search1', function() {
 
                         </div>
                         <?php
-                    }
+                        }
                     ?>
 
                     <div class="timeline">
