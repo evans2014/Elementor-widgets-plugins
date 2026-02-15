@@ -28,16 +28,16 @@ function shipment_install_demo() {
 
         $route1 = [
             [
-                'city' => 'Sofia',
-                'address' => 'Central Station',
+                'city' => 'София',
+                'address' => 'бул. Акад. Иван Гешов № 2Е',
                 'datetime' => date('Y-m-d\TH:i'),
                 'lat' => 42.6977,
                 'lng' => 23.3219,
                 'status' => 'departure'
             ],
             [
-                'city' => 'Plovdiv',
-                'address' => 'City Center',
+                'city' => 'Пловдив',
+                'address' => 'Южна промишлена зона, 4113',
                 'datetime' => date('Y-m-d\TH:i', strtotime('+4 hours')),
                 'lat' => 42.1354,
                 'lng' => 24.7453,
@@ -70,23 +70,23 @@ function shipment_install_demo() {
 
         $route2 = [
             [
-                'city' => 'Prague',
-                'address' => 'Main Warehouse',
+                'city' => 'Прага',
+                'address' => 'Čestmírova 25, 140 00 ',
                 'datetime' => date('Y-m-d\TH:i'),
                 'lat' => 50.0755,
                 'lng' => 14.4378,
                 'status' => 'departure'
             ],
             [
-                'city' => 'Munich',
-                'address' => 'Logistics Hub',
+                'city' => 'Мюнхен',
+                'address' => 'Schäftlarnstraße 10, 81371',
                 'datetime' => date('Y-m-d\TH:i', strtotime('+6 hours')),
                 'lat' => 48.1351,
                 'lng' => 11.5820,
                 'status' => 'intransit'
             ],
             [
-                'city' => 'Paris',
+                'city' => 'Париж',
                 'address' => 'Final Destination',
                 'datetime' => date('Y-m-d\TH:i', strtotime('+12 hours')),
                 'lat' => 48.8566,

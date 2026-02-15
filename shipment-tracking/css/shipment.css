@@ -134,3 +134,61 @@
 .shipment-btn:hover {
     background: #005177;
 }
+.city-marker {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff;
+}
+
+.shipment-blue-dot {
+    width: 14px;
+    height: 14px;
+    background: #007bff;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 6px rgba(0,0,0,0.4);
+}
+
+.shipment-green-check {
+    width: 20px;
+    height: 20px;
+    background: #28a745;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    box-shadow: 0 0 6px rgba(0,0,0,0.4);
+}
+
+.shipment-green-check::after {
+    content: "✔";
+}
+
+.shipment-red-flag {
+    width: 20px;
+    height: 20px;
+    background: #dc3545;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    box-shadow: 0 0 6px rgba(0,0,0,0.4);
+}
+
+.shipment-red-flag::after {
+    content: "🏁";
+}

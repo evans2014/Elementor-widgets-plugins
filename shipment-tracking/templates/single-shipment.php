@@ -45,6 +45,69 @@ $courier_message = get_post_meta($post->ID,'_courier_message',true);
     </div>
 
 </div>
+<style>
+    .city-marker {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        color: #fff;
+    }
+
+    .shipment-blue-dot {
+        width: 14px;
+        height: 14px;
+        background: #007bff;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 0 6px rgba(0,0,0,0.4);
+    }
+
+    .shipment-green-check {
+        width: 20px;
+        height: 20px;
+        background: #28a745;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
+        box-shadow: 0 0 6px rgba(0,0,0,0.4);
+    }
+
+    .shipment-green-check::after {
+        content: "✔";
+    }
+
+    .shipment-red-flag {
+        width: 20px;
+        height: 20px;
+        background: #dc3545;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
+        box-shadow: 0 0 6px rgba(0,0,0,0.4);
+    }
+
+    .shipment-red-flag::after {
+        content: "🏁";
+    }
+
+
+
+</style>
 
 <script>
    document.addEventListener('DOMContentLoaded', function(){
@@ -64,8 +127,28 @@ $courier_message = get_post_meta($post->ID,'_courier_message',true);
 
     map.fitBounds(latlngs, {padding:[50,50]});
 
+     const blueDotIcon = L.divIcon({
+       className: 'shipment-blue-dot',
+       iconSize: [24, 24],
+       iconAnchor: [10, 10]
+     });
+
+     const greenCheckIcon = L.divIcon({
+       className: 'shipment-green-check',
+       iconSize: [24, 24],
+       iconAnchor: [10, 10]
+     });
+
+     const redFlagIcon = L.divIcon({
+       className: 'shipment-red-flag',
+       iconSize: [24, 24],
+       iconAnchor: [10, 10]
+     });
+
     // Popup markers
-    routePoints.forEach(point => {
+    //routePoints.forEach(point => {
+     routePoints.forEach((point, index) => {
+
       if (!point.lat || !point.lng) return;
 
       const formattedDate = new Date(point.datetime).toLocaleString('en-US', {
@@ -77,7 +160,20 @@ $courier_message = get_post_meta($post->ID,'_courier_message',true);
         hour12: true
       });
 
-      L.marker([parseFloat(point.lat), parseFloat(point.lng)])
+
+
+       let iconToUse = blueDotIcon; // по default
+
+       if (index === 0) {
+         iconToUse = greenCheckIcon; // първата точка
+       } else if (index === routePoints.length - 1) {
+         iconToUse = redFlagIcon; // последната точка
+       }
+
+      L.marker(
+        [parseFloat(point.lat), parseFloat(point.lng)],
+        { icon: iconToUse }
+      )
         .addTo(map)
         .bindPopup(`
           <strong>${point.city}</strong><br>
@@ -85,6 +181,8 @@ $courier_message = get_post_meta($post->ID,'_courier_message',true);
           ${formattedDate}<br>
           ${point.status ?? ''}
         `);
+
+
     });
 
     let truckMarker = null;

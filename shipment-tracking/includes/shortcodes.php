@@ -183,80 +183,28 @@ add_shortcode('shipment_search1', function() {
                 </div>
 
             </div>
-            <style>
+           <style>
+                .shipment-blue-dot {
+                    width: 14px; height: 14px;
+                    background: #007bff; border-radius: 50%; border: 2px solid #fff;
+                }
+                .shipment-green-check {
+                    width: 20px; height: 20px;
+                    background: #28a745; border-radius: 50%; border: 2px solid #fff;
+                    display:flex; align-items:center; justify-content:center; color:white; font-size:12px;
+                }
+                .shipment-green-check::after { content: "✔"; }
+
+                .shipment-red-flag {
+                    width: 20px; height: 20px;
+                    background: #dc3545; border-radius: 50%; border: 2px solid #fff;
+                    display:flex; align-items:center; justify-content:center; color:white; font-size:12px;
+                }
+                .shipment-red-flag::after { content: "🏁"; }
+
                 .leaflet-routing-container {
-                    display: none !important;
+                    display:none
                 }
-
-                .timeline {
-                    position: relative;
-                    max-width: 800px;
-                    margin: 30px auto;
-                    padding-left: 40px;
-                }
-
-                .timeline-item {
-                    position: relative;
-                    margin-bottom: 15px;
-                    display: flex;
-                    align-items: flex-start; /* важна част! */
-                }
-                .timeline-dot {
-                    position: absolute;
-                    left: -28px;
-                    top: 9px;
-                    width: 16px;
-                    height: 16px;
-                    background-color: #0073aa;
-                    border: 3px solid #fff;
-                    border-radius: 50%;
-                    z-index: 1;
-                    box-shadow: 0 0 0 2px #0073aa;
-                }
-
-                .timeline-content {
-                    flex: 1;
-                    background: #f9f9f9;
-                    padding: 0 10px 14px 10px;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                }
-
-                .timeline-city {
-                    font-weight: bold;
-                    margin-bottom: 4px;
-                }
-
-                .timeline-address {
-                    color: #333;
-                    margin-bottom: 4px;
-                }
-
-                .timeline-date {
-                    color: #666;
-                    font-size: 0.9em;
-                }
-
-                .timeline-item:not(:last-child)::after {
-                    content: '';
-                    position: absolute;
-                    left: -20px;
-                    top: 22px;
-                    bottom: -25px;
-                    width: 2px;
-                    background-color: #ddd;
-                    z-index: 0;
-                }
-                .toggle-routing-btn {
-                    color:#0A1A3D !important;
-                }
-                .leaflet-routing-alt  table td,.leaflet-routing-alt  table th {
-                    border: 1px solid hsla(0,0%,50%,.502);
-                    line-height: 1.5;
-                    padding: 5px;
-                    vertical-align: top;
-                }
-
             </style>
             <script>
 
@@ -279,17 +227,41 @@ add_shortcode('shipment_search1', function() {
                 map.fitBounds(latlngs, {padding:[50,50]});
 
                 // Popup markers (only shown on click)
+                const blueDotIcon = L.divIcon({
+                  className: 'shipment-blue-dot',
+                  iconSize: [24, 24],
+                  iconAnchor: [10, 10]
+                });
+
+                const greenCheckIcon = L.divIcon({
+                  className: 'shipment-green-check',
+                  iconSize: [24, 24],
+                  iconAnchor: [10, 10]
+                });
+
+                const redFlagIcon = L.divIcon({
+                  className: 'shipment-red-flag',
+                  iconSize: [24, 24],
+                  iconAnchor: [10, 10]
+                });
 
                 latlngs.forEach((coords, index) => {
                   const point = routePoints[index];
 
-                  L.marker(coords)
+                  let iconToUse = blueDotIcon; // по default
+
+                  if (index === 0) {
+                    iconToUse = greenCheckIcon; // първата точка
+                  } else if (index === routePoints.length - 1) {
+                    iconToUse = redFlagIcon; // последната точка
+                  }
+
+                  L.marker(coords, { icon: iconToUse })
                     .addTo(map)
                     .bindPopup(`
-                <strong>${point.city}</strong><br>
-                ${point.address}
-            `);
-                  // not use openPopup()
+                        <strong>${point.city}</strong><br>
+                        ${point.address}
+                    `);
                 });
                 // Routing
                 L.Routing.control({
@@ -297,6 +269,7 @@ add_shortcode('shipment_search1', function() {
                   routeWhileDragging:false,
                   draggableWaypoints:false,
                   addWaypoints:false,
+                  show:false,
                   lineOptions:{styles:[{color:'blue',opacity:0.7,weight:5}]},
                   createMarker:function(){ return null; }
                 }).on('routesfound', function(e){
