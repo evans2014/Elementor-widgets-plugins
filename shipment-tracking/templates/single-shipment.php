@@ -12,13 +12,14 @@ $total_time = get_post_meta($post->ID, '_total_time', true);
 $courier_name = get_post_meta($post->ID,'_courier_name',true);
 $courier_phone = get_post_meta($post->ID,'_courier_phone',true);
 $courier_message = get_post_meta($post->ID,'_courier_message',true);
+$google_api_key = get_option('shipment_google_maps_api', '');
 ?>
 
-<div class="shipment-main" >
+<div class="shipment-main">
     <div class="shipment-column-left" >
-        <div id="shipment-map" style="height:900px; width:100%;"></div>
+        <div id="shipment-map" <!--style="height:800px; width:100%;"-->></div>
     </div>
-    <div class="shipment-column-right" >
+    <div class="shipment-column-right">
         <h4>Shipment Information</h4>
         <div><strong>Tracking Number:</strong> <?php echo esc_html($tracking_number); ?></div>
         <div><strong>Status:</strong> <?php echo esc_html($status); ?></div>
@@ -143,114 +144,241 @@ $courier_message = get_post_meta($post->ID,'_courier_message',true);
     .shipment-red-flag::after {
         content: "🏁";
     }
+    @media (max-width: 900px) {
+        .shipment-main  {
+            flex-direction: column;
+        }
+        .shipment-column-left {
+            flex: none;
+            width: 100%;
+            height:550px;
+        }
 
-
+        .shipment-column-right {
+            flex: none;
+            width: 100%;
+            padding: 20px;
+        }
+    }
 
 </style>
+<?php
+if($google_api_key) {
 
-<script>
-   document.addEventListener('DOMContentLoaded', function(){
-      const routePoints = <?php echo json_encode($route_points); ?>;
-    if (!routePoints.length) return;
-    const latlngs = routePoints
-      .filter(p => p.lat && p.lng)
-      .map(p => [parseFloat(p.lat), parseFloat(p.lng)]);
+    ?>
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
 
-    if (!latlngs.length) return;
+        const routePoints = <?php echo json_encode($route_points); ?>;
+        if (!routePoints.length) return;
 
-    // We create the map
-    const map = L.map('shipment-map');
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+        const map = new google.maps.Map(document.getElementById("shipment-map"), {
+          zoom: 6,
+          center: {
+            lat: parseFloat(routePoints[0].lat),
+            lng: parseFloat(routePoints[0].lng)
+          }
+        });
 
-    map.fitBounds(latlngs, {padding:[50,50]});
+        const directionsService = new google.maps.DirectionsService();
+        const directionsRenderer = new google.maps.DirectionsRenderer({
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: "#0e59f0",
+            strokeWeight: 4,
+            strokeOpacity: 1
+          }
+        });
 
-     const blueDotIcon = L.divIcon({
-       className: 'shipment-blue-dot',
-       iconSize: [24, 24],
-       iconAnchor: [10, 10]
-     });
+        directionsRenderer.setMap(map);
+        const waypoints = routePoints.slice(1, -1).map(point => ({
+          location: {
+            lat: parseFloat(point.lat),
+            lng: parseFloat(point.lng)
+          },
+          stopover: true
+        }));
 
-     const greenCheckIcon = L.divIcon({
-       className: 'shipment-green-check',
-       iconSize: [24, 24],
-       iconAnchor: [10, 10]
-     });
+        directionsService.route({
+          origin: {
+            lat: parseFloat(routePoints[0].lat),
+            lng: parseFloat(routePoints[0].lng)
+          },
+          destination: {
+            lat: parseFloat(routePoints[routePoints.length - 1].lat),
+            lng: parseFloat(routePoints[routePoints.length - 1].lng)
+          },
+          waypoints: waypoints,
+          travelMode: google.maps.TravelMode.DRIVING
+        }, function(result, status) {
+          if (status === "OK") {
+            directionsRenderer.setDirections(result);
+          }
+        });
+        // Custom circle markers
 
-     const redFlagIcon = L.divIcon({
-       className: 'shipment-red-flag',
-       iconSize: [24, 24],
-       iconAnchor: [10, 10]
-     });
+        let activeInfoWindow = null; // ще държи текущо отворения popup
 
-    // Popup markers
-    //routePoints.forEach(point => {
-     routePoints.forEach((point, index) => {
+        routePoints.forEach((point, index) => {
 
-      if (!point.lat || !point.lng) return;
+          let color = "#2563eb"; // blue default
+          if (index === 0) {
+            color = "#16a34a"; // green
+          } else if (index === routePoints.length - 1) {
+            color = "#dc2626"; // red
+          }
 
-      const formattedDate = new Date(point.datetime).toLocaleString('en-US', {
-        month: 'numeric',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
+          const marker = new google.maps.Marker({
+            position: {
+              lat: parseFloat(point.lat),
+              lng: parseFloat(point.lng)
+            },
+            map: map,
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 12,
+              fillColor: color,
+              fillOpacity: 1,
+              strokeColor: "#ffffff",
+              strokeWeight: 3
+            }
+          });
+
+          const formattedDate = new Date(point.datetime).toLocaleString('en-US', {
+            month: 'numeric',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+
+          const infoWindow = new google.maps.InfoWindow({
+            content: `
+                <div style="min-width:200px">
+                    <strong>${point.city}</strong><br>
+                    ${point.address ?? ''}<br>
+                    ${formattedDate ?? ''}<br>
+                    ${point.status ?? ''}
+                </div>
+            `
+          });
+
+          marker.addListener("click", function() {
+
+            // Close popup
+            if (activeInfoWindow) {
+              activeInfoWindow.close();
+            }
+
+            infoWindow.open(map, marker);
+            activeInfoWindow = infoWindow;
+          });
+        });
       });
 
+    </script>
+    <?php } else { ?>
 
+    <script>
+      document.addEventListener('DOMContentLoaded', function(){
+        const routePoints = <?php echo json_encode($route_points); ?>;
+        if (!routePoints.length) return;
+        const latlngs = routePoints
+          .filter(p => p.lat && p.lng)
+          .map(p => [parseFloat(p.lat), parseFloat(p.lng)]);
 
-       let iconToUse = blueDotIcon; // по default
+        if (!latlngs.length) return;
 
-       if (index === 0) {
-         iconToUse = greenCheckIcon; // първата точка
-       } else if (index === routePoints.length - 1) {
-         iconToUse = redFlagIcon; // последната точка
-       }
+        // We create the map
+        const map = L.map('shipment-map');
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
 
-      L.marker(
-        [parseFloat(point.lat), parseFloat(point.lng)],
-        { icon: iconToUse }
-      )
-        .addTo(map)
-        .bindPopup(`
+        map.fitBounds(latlngs, {padding:[50,50]});
+
+        const blueDotIcon = L.divIcon({
+          className: 'shipment-blue-dot',
+          iconSize: [24, 24],
+          iconAnchor: [10, 10]
+        });
+
+        const greenCheckIcon = L.divIcon({
+          className: 'shipment-green-check',
+          iconSize: [24, 24],
+          iconAnchor: [10, 10]
+        });
+
+        const redFlagIcon = L.divIcon({
+          className: 'shipment-red-flag',
+          iconSize: [24, 24],
+          iconAnchor: [10, 10]
+        });
+
+        // Popup markers
+        routePoints.forEach((point, index) => {
+
+          if (!point.lat || !point.lng) return;
+
+          const formattedDate = new Date(point.datetime).toLocaleString('en-US', {
+            month: 'numeric',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+
+          let iconToUse = blueDotIcon; // по default
+
+          if (index === 0) {
+            iconToUse = greenCheckIcon; // първата точка
+          } else if (index === routePoints.length - 1) {
+            iconToUse = redFlagIcon; // последната точка
+          }
+
+          L.marker(
+            [parseFloat(point.lat), parseFloat(point.lng)],
+            { icon: iconToUse }
+          )
+            .addTo(map)
+            .bindPopup(`
           <strong>${point.city}</strong><br>
           ${point.address ? point.address + '<br>' : ''}
           ${formattedDate}<br>
           ${point.status ?? ''}
         `);
 
+        });
 
-    });
+        let truckMarker = null;
+        let truckInterval = null;
 
-    let truckMarker = null;
-    let truckInterval = null;
+        // Routing Control on the map
+        const routingControl = L.Routing.control({
+          waypoints: latlngs.map(l => L.latLng(l[0], l[1])),
+          routeWhileDragging: false,
+          draggableWaypoints: false,
+          addWaypoints: false,
+          lineOptions: {
+            styles: [{color: 'blue', opacity: 0.7, weight: 5}]
+          },
+          createMarker: function(){ return null; },
+          show: true // Important: shows the panel on the map
+        }).addTo(map);
 
-    // Routing Control on the map
-    const routingControl = L.Routing.control({
-      waypoints: latlngs.map(l => L.latLng(l[0], l[1])),
-      routeWhileDragging: false,
-      draggableWaypoints: false,
-      addWaypoints: false,
-      lineOptions: {
-        styles: [{color: 'blue', opacity: 0.7, weight: 5}]
-      },
-      createMarker: function(){ return null; },
-      show: true // Important: shows the panel on the map
-    }).addTo(map);
+        routingControl.on('routesfound', function(e){
 
-    routingControl.on('routesfound', function(e){
+          const route = e.routes[0];
+          const coordinates = route.coordinates;
+          const totalDistance = (route.summary.totalDistance / 1000).toFixed(1);
+          const totalTime = route.summary.totalTime;
+          const hours = Math.floor(totalTime / 3600);
+          const minutes = Math.floor((totalTime % 3600) / 60);
 
-      const route = e.routes[0];
-      const coordinates = route.coordinates;
-      const totalDistance = (route.summary.totalDistance / 1000).toFixed(1);
-      const totalTime = route.summary.totalTime;
-      const hours = Math.floor(totalTime / 3600);
-      const minutes = Math.floor((totalTime % 3600) / 60);
-
-      // You can show text distance/time somewhere without moving the routing-container
-      document.getElementById('route-summary').innerHTML = `
+          // You can show text distance/time somewhere without moving the routing-container
+          document.getElementById('route-summary').innerHTML = `
         <div style="background:#f3f4f6; padding:10px; border-radius:8px; margin-bottom:20px;">
           <strong>Маршрут:</strong><br>
           Разстояние: ${totalDistance} км<br>
@@ -258,76 +386,79 @@ $courier_message = get_post_meta($post->ID,'_courier_message',true);
         </div>
       `;
 
-      // Truck icon
-      const truckIcon = L.icon({
-        iconUrl: "<?php echo plugin_dir_url(__FILE__); ?>../assets/img/truck.png",
-        iconSize: [40,40],
-        iconAnchor: [20,20]
-      });
+          // Truck icon
+          const truckIcon = L.icon({
+            iconUrl: "<?php echo plugin_dir_url(__FILE__); ?>../assets/img/truck.png",
+            iconSize: [40,40],
+            iconAnchor: [20,20]
+          });
 
-      if (truckMarker) map.removeLayer(truckMarker);
-      truckMarker = L.marker(coordinates[0], {icon: truckIcon}).addTo(map);
+          if (truckMarker) map.removeLayer(truckMarker);
+          truckMarker = L.marker(coordinates[0], {icon: truckIcon}).addTo(map);
 
-      let index = 0;
-      if (truckInterval) clearInterval(truckInterval);
+          let index = 0;
+          if (truckInterval) clearInterval(truckInterval);
 
-      truckInterval = setInterval(function(){
-        if (index >= coordinates.length) {
-          clearInterval(truckInterval);
+          truckInterval = setInterval(function(){
+            if (index >= coordinates.length) {
+              clearInterval(truckInterval);
+              return;
+            }
+            truckMarker.setLatLng(coordinates[index]);
+            index++;
+          }, 80);
+        });
+
+        setTimeout(() => {
+          const routingDiv = document.querySelector('.leaflet-routing-container');
+          if(routingDiv) routingDiv.style.display = 'none';
+        }, 100);
+
+        // Toggle button for the right box
+        const toggleRoutingBtn = L.control({position: 'topright'});
+        toggleRoutingBtn.onAdd = function(map){
+          const btn = L.DomUtil.create('button', 'toggle-routing-btn leaflet-bar');
+          btn.innerHTML = 'Покажи/Скрий маршрут';
+          btn.style.background = 'white';
+          btn.style.cursor = 'pointer';
+          btn.style.padding = '5px 10px';
+          btn.style.marginBottom = '5px';
+
+          L.DomEvent.on(btn, 'click', function(e){
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+
+            const routingDiv = document.querySelector('.leaflet-routing-container');
+            if(routingDiv){
+              routingDiv.style.display = (routingDiv.style.display === 'none') ? 'block' : 'none';
+            }
+          });
+
+          return btn;
+        };
+        toggleRoutingBtn.addTo(map);
+
+        // Toggle button for timeline
+        const timelineBtn = document.getElementById('toggle-timeline');
+        const timeline = document.getElementById('shipment-timeline');
+
+        // Safety checks with helpful errors
+        if (!timelineBtn) {
           return;
         }
-        truckMarker.setLatLng(coordinates[index]);
-        index++;
-      }, 80);
-    });
+        if (!timeline) {
+          return;
+        }
 
-     setTimeout(() => {
-       const routingDiv = document.querySelector('.leaflet-routing-container');
-       if(routingDiv) routingDiv.style.display = 'none';
-     }, 100);
+        // Robust toggle (handles CSS-hidden elements too)
+        timelineBtn.addEventListener('click', () => {
+          const isHidden = window.getComputedStyle(timeline).display === 'none';
+          timeline.style.display = isHidden ? 'block' : 'none';
+        });
 
-     // Toggle button for the right box
-     const toggleRoutingBtn = L.control({position: 'topright'});
-     toggleRoutingBtn.onAdd = function(map){
-       const btn = L.DomUtil.create('button', 'toggle-routing-btn leaflet-bar');
-       btn.innerHTML = 'Покажи/Скрий маршрут';
-       btn.style.background = 'white';
-       btn.style.cursor = 'pointer';
-       btn.style.padding = '5px 10px';
-       btn.style.marginBottom = '5px';
+      });
+    </script>
 
-       L.DomEvent.on(btn, 'click', function(e){
-         L.DomEvent.stopPropagation(e);
-         L.DomEvent.preventDefault(e);
+    <?php } ?>
 
-         const routingDiv = document.querySelector('.leaflet-routing-container');
-         if(routingDiv){
-           routingDiv.style.display = (routingDiv.style.display === 'none') ? 'block' : 'none';
-         }
-       });
-
-       return btn;
-     };
-     toggleRoutingBtn.addTo(map);
-
-     // Toggle button for timeline
-     const timelineBtn = document.getElementById('toggle-timeline');
-     const timeline = document.getElementById('shipment-timeline');
-
-     // Safety checks with helpful errors
-     if (!timelineBtn) {
-       return;
-     }
-     if (!timeline) {
-       return;
-     }
-
-     // Robust toggle (handles CSS-hidden elements too)
-     timelineBtn.addEventListener('click', () => {
-       const isHidden = window.getComputedStyle(timeline).display === 'none';
-       timeline.style.display = isHidden ? 'block' : 'none';
-     });
-
-  });
-</script>
 <?php get_footer(); ?>

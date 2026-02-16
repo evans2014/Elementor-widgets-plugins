@@ -390,3 +390,17 @@ function shipment_enqueue_frontend_assets() {
     wp_localize_script( 'shipment-frontend', 'shipment_data', [ 'plugin_url' => plugin_dir_url(__FILE__) ] );
 
 }
+function shipment_google_maps_scripts() {
+    $google_api_key = get_option('shipment_google_maps_api');
+    if (!empty($google_api_key)) {
+        wp_enqueue_script(
+            'google-maps',
+            'https://maps.googleapis.com/maps/api/js?key=' . esc_attr($google_api_key) . '&libraries=places',
+            [],
+            null,
+            true
+        );
+    }
+
+}
+add_action('wp_enqueue_scripts', 'shipment_google_maps_scripts');

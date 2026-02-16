@@ -92,11 +92,11 @@ add_shortcode('shipment_search1', function() {
             $courier_msg  = get_post_meta($post_id, '_courier_message', true);
             ?>
 
-            <div style="display:flex;  align-items:flex-start;">
-                <div style="flex:2;">
-                    <div id="shipment-map" style="height:700px;"></div>
+            <div class="container-map">
+                <div class="left-content">
+                    <div id="shipment-map" style="width:100%;height:700px;"></div>
                 </div>
-                <div style="flex:1; background:#f3f4f6; padding:5px; border-radius:10px;padding: 5px 20px">
+                <div class="right-content">
                     <form method="get" style="margin-bottom:20px;">
                         <input type="text" name="tracking"
                                placeholder="Въведете Tracking Number"
@@ -184,6 +184,7 @@ add_shortcode('shipment_search1', function() {
 
             </div>
            <style>
+
                 .shipment-blue-dot {
                     width: 14px; height: 14px;
                     background: #007bff; border-radius: 50%; border: 2px solid #fff;
@@ -322,4 +323,28 @@ add_filter('admin_footer_text', function($text) {
     }
 
     return $text;
+});
+
+
+add_shortcode('shipment_search_form', function() {
+
+    // Намери URL на страницата с [shipment_search1]
+    $tracking_page = get_page_by_path('tracking-search'); // slug на страницата
+    $tracking_url = $tracking_page ? get_permalink($tracking_page->ID) : '#';
+
+    ob_start(); ?>
+
+    <form action="<?php echo esc_url($tracking_url); ?>" method="get" style="display:flex; gap:10px; max-width:400px;">
+        <input
+                type="text"
+                name="tracking"
+                placeholder="Enter Tracking Number"
+                required
+                style="flex:1; padding:6px 10px;"
+        />
+        <button type="submit" class="button button-primary">Search</button>
+    </form>
+
+    <?php
+    return ob_get_clean();
 });

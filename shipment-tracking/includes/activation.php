@@ -38,7 +38,7 @@ register_activation_hook(
         shipment_add_pages_to_menu();
     }
 
-// Добавяне към Header Menu
+// Add to Header Menu
 
 function shipment_add_pages_to_menu() {
 
@@ -46,7 +46,7 @@ function shipment_add_pages_to_menu() {
         return;
     }
 
-    // Взимаме страниците
+    // We take pages
     $tracking_page = get_page_by_title('Tracking search');
     $posts_page    = get_page_by_title('Shipment Posts');
 
@@ -54,18 +54,18 @@ function shipment_add_pages_to_menu() {
         return;
     }
 
-    // Взимаме всички менюта
+    // We take all menus
     $menus = wp_get_nav_menus();
 
     if (!empty($menus)) {
-        $menu = $menus[0]; // първото налично меню
+        $menu = $menus[0];
         $menu_id = $menu->term_id;
     } else {
-        // Ако няма меню – създаваме
+        // If there is no menu – create it
         $menu_id = wp_create_nav_menu('Main Menu');
     }
 
-    // Добавяме страниците в менюто
+    // Add the pages to the menu
     wp_update_nav_menu_item($menu_id, 0, [
         'menu-item-title'  => 'Tracking search',
         'menu-item-object' => 'page',
@@ -82,11 +82,11 @@ function shipment_add_pages_to_menu() {
         'menu-item-status' => 'publish'
     ]);
 
-    // Опитваме да го зададем като primary location
+    // We try to set it as primary location
     $locations = get_theme_mod('nav_menu_locations');
 
-    if (isset($locations['primary'])) {
-        $locations['primary'] = $menu_id;
+    if (isset($locations['header'])) {
+        $locations['header'] = $menu_id;
         set_theme_mod('nav_menu_locations', $locations);
     }
 
