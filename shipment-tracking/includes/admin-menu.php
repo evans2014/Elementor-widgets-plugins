@@ -69,6 +69,12 @@ function shipment_tools_page() {
                 </tr>
             </table>
             <?php submit_button('Save Settings'); ?>
+            <div>
+                <p>[shipment_search_form] - search from by tracking number</p>
+                <p>[shipment_search]-to display the shipment search form anywhere.</p>
+                <p>[shipment_grid] - to display the shipment post grid.</p>
+
+            </div>
         </form>
     </div>
     <?php

@@ -41,7 +41,7 @@ function shipment_grid_shortcode() {
 
 
 
-add_shortcode('shipment_search1', function() {
+add_shortcode('shipment_search', function() {
     ob_start();
     $tracking = isset($_GET['tracking']) ? sanitize_text_field($_GET['tracking']) : '';
     ?>
@@ -298,21 +298,17 @@ add_shortcode('shipment_search1', function() {
                 }).addTo(map);
 
               });
-
             </script>
 
         <?php
         endwhile;
-
         wp_reset_postdata();
 
     else :
         echo "<p>Няма намерена пратка.</p>";
     endif;
-
     return ob_get_clean();
 });
-
 
 add_filter('admin_footer_text', function($text) {
 
@@ -328,7 +324,7 @@ add_filter('admin_footer_text', function($text) {
 
 add_shortcode('shipment_search_form', function() {
 
-    // Намери URL на страницата с [shipment_search1]
+    // Find URL of the page with [shipment_search]
     $tracking_page = get_page_by_path('tracking-search'); // slug на страницата
     $tracking_url = $tracking_page ? get_permalink($tracking_page->ID) : '#';
 

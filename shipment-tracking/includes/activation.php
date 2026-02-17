@@ -16,7 +16,7 @@ register_activation_hook(
             if (!get_page_by_title('Tracking search', OBJECT, 'page')) {
                 wp_insert_post([
                     'post_title'   => 'Tracking search',
-                    'post_content' => '[shipment_search1]',
+                    'post_content' => '[shipment_search]',
                     'post_status'  => 'publish',
                     'post_type'    => 'page'
                 ]);

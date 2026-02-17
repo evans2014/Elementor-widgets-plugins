@@ -47,14 +47,12 @@ Perfect for logistics companies, couriers, freight services and delivery busines
 3. On activation:
    - 2 demo Shipment posts are created.
    - 1 page named "Tracking Search" is created with shortcode:
-     [shipment_search1]
-   - 1 page named "Tracking Posts" is use single-shipmen.php
+     [shipment_search]
 
 4. Use shortcode:
-   [shipment_search1]
-   to display the shipment search form anywhere.
-
-5. For page use search shortcode [shipment_search_form]
+   [shipment_search]-to display the shipment search form anywhere.
+   [shipment_grid] - to display the shipment post grid.
+   [shipment_search_form] - search from by tracking number
 
 == Usage ==
 
@@ -75,7 +73,7 @@ The plugin adds:
 
 == Shortcodes ==
 
-[shipment_search1]
+[shipment_search]
 Displays tracking search form and latest shipment by default.
 
 == Frequently Asked Questions ==
@@ -103,7 +101,7 @@ Yes, global geocoding is supported.
 
 = 1.0.0 =
 - Initial release
-- Shipment Post
+- Shipment CPT
 - Route builder
 - Tracking search
 - Demo data installer
