@@ -306,6 +306,7 @@ add_shortcode('shipment_search', function() {
 
     else :
         echo "<p>Няма намерена пратка.</p>";
+        echo do_shortcode('[shipment_search_form]');
     endif;
     return ob_get_clean();
 });
