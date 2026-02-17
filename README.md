@@ -1,1 +1,1 @@
-Elementor plugins for Wordpress
+Elementor plugins and WP plugins for Wordpress
