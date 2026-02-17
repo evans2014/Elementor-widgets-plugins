@@ -10,7 +10,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 if ( ! defined('MWEL_GOOGLE_MAPS_API_KEY') ) {
-    define('MWEL_GOOGLE_MAPS_API_KEY', 'AIzaSyBIcNrFHL2CckWa6OKlUlXOm_YRS465I38'); // <-- 
+    define('MWEL_GOOGLE_MAPS_API_KEY', 'ADD GOOGLE MAP API KEY'); // <-- 
 }
 
 function mwe_enqueue_scripts() {

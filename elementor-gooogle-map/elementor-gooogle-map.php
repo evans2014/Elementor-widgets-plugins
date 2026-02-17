@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) exit;
 add_action('wp_enqueue_scripts', function () {
     wp_enqueue_script(
         'google-maps-api',
-        'https://maps.googleapis.com/maps/api/js?key=AIzaSyBIcNrFHL2CckWa6OKlUlXOm_YRS465I38',
+        'https://maps.googleapis.com/maps/api/js?key=GOOGLE_MAP_KEY',
         [],
         null,
         true

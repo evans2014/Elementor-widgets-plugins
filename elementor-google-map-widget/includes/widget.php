@@ -25,7 +25,7 @@ function egmw_register_frontend_scripts() {
 /* Helper to output map scripts with API key and localized data - used by the widget class */
 function egmw_enqueue_map_assets( $map_data = array(), $settings = array() ) {
     $api_key = get_option( 'egmw_api_key', '' );
-    $api_key = 'AIzaSyBIcNrFHL2CckWa6OKlUlXOm_YRS465I38';
+    $api_key = 'ADD GOOGLE MAP KEY';
     if ( empty( $api_key ) ) {
         // don't enqueue map script if no key; widget will show warning
         return false;
