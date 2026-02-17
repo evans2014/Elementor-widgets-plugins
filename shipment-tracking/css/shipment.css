@@ -6,6 +6,11 @@
 #shipment-map {
     height:800px; width:100%;
 }
+
+#shipment-map a {
+    text-decoration: none !important;
+}
+
 .shipment-main {
     display:flex; gap:30px; max-width:1400px; margin:40px auto;
 }
@@ -265,3 +270,13 @@
     }
 }
 
+.map-search {
+    display:flex;
+    gap:10px;
+    max-width:400px;
+}
+
+.map-input {
+    flex:1;
+    padding:6px 10px;
+}

@@ -9,9 +9,7 @@ function shipment_grid_shortcode() {
         'posts_per_page' => -1,
         'post_status' => 'publish'
     ]);
-
     ob_start();
-
     echo '<div class="shipment-grid">';
 
     if ($query->have_posts()) :
@@ -35,11 +33,8 @@ function shipment_grid_shortcode() {
     echo '</div>';
 
     wp_reset_postdata();
-
     return ob_get_clean();
 }
-
-
 
 add_shortcode('shipment_search', function() {
     ob_start();
@@ -80,7 +75,6 @@ add_shortcode('shipment_search', function() {
 
         while ($shipment->have_posts()) :
             $shipment->the_post();
-
             $post_id = get_the_ID();
 
             $route_points = get_post_meta($post_id, '_shipment_route_points', true) ?: [];
@@ -145,7 +139,6 @@ add_shortcode('shipment_search', function() {
                         <?php
                         }
                     ?>
-
                     <div class="timeline">
                         <?php
                         $total_points = count($route_points);
@@ -174,17 +167,14 @@ add_shortcode('shipment_search', function() {
 
                                 </div>
                             </div>
-
                         <?php endforeach; ?>
                     </div>
                     <div><strong>Куриер:</strong> <?php echo esc_html($courier_name); ?></div>
                     <div><strong>Телефон:</strong> <?php echo esc_html($courier_phone); ?></div>
                     <div><strong>Съобщение:</strong> <?php echo esc_html($courier_msg); ?></div>
                 </div>
-
             </div>
            <style>
-
                 .shipment-blue-dot {
                     width: 14px; height: 14px;
                     background: #007bff; border-radius: 50%; border: 2px solid #fff;
@@ -318,30 +308,25 @@ add_filter('admin_footer_text', function($text) {
     if ($screen && $screen->post_type === 'shipment') {
         return '';
     }
-
     return $text;
 });
 
-
 add_shortcode('shipment_search_form', function() {
-
     // Find URL of the page with [shipment_search]
     $tracking_page = get_page_by_path('tracking-search'); // slug на страницата
     $tracking_url = $tracking_page ? get_permalink($tracking_page->ID) : '#';
 
     ob_start(); ?>
-
-    <form action="<?php echo esc_url($tracking_url); ?>" method="get" style="display:flex; gap:10px; max-width:400px;">
+    <form action="<?php echo esc_url($tracking_url); ?>" method="get" class="map-search" >
         <input
                 type="text"
+                class="map-input"
                 name="tracking"
                 placeholder="Enter Tracking Number"
                 required
-                style="flex:1; padding:6px 10px;"
         />
         <button type="submit" class="button button-primary">Search</button>
     </form>
-
     <?php
     return ob_get_clean();
 });
