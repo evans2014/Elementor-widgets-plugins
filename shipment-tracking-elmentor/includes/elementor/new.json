@@ -1,0 +1,59 @@
+{
+  "title": "Single Shipment Template",
+  "type": "single",
+  "version": "0.4",
+  "page_settings": [],
+  "content": [
+    {
+      "id": "section_1",
+      "elType": "section",
+      "settings": {
+        "content_width": "boxed",
+        "padding": {
+          "unit": "px",
+          "top": "40",
+          "right": "0",
+          "bottom": "40",
+          "left": "0"
+        }
+      },
+      "elements": [
+        {
+          "id": "column_1",
+          "elType": "column",
+          "settings": {
+            "_column_size": 100
+          },
+          "elements": [
+            {
+              "id": "heading_title",
+              "elType": "widget",
+              "widgetType": "heading",
+              "settings": {
+                "title": "{{post_title}}",
+                "size": "xl",
+                "align": "center"
+              }
+            },
+            {
+              "id": "spacer_1",
+              "elType": "widget",
+              "widgetType": "spacer",
+              "settings": {
+                "height": 30
+              }
+            },
+            {
+              "id": "shipment_shortcode",
+              "elType": "widget",
+              "widgetType": "shortcode",
+              "settings": {
+                "shortcode": "[shipment_single]"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

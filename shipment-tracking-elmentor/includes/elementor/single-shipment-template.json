@@ -1,0 +1,103 @@
+{
+  "version": "0.4",
+  "title": "Single Shipment Layout",
+  "type": "page",
+  "content": [
+    {
+      "id": "section_main",
+      "elType": "section",
+      "settings": {
+        "content_width": "full",
+        "padding": {
+          "unit": "px",
+          "top": "40",
+          "right": "20",
+          "bottom": "40",
+          "left": "20"
+        }
+      },
+      "elements": [
+        {
+          "id": "column_left",
+          "elType": "column",
+          "settings": {
+            "_column_size": 60
+          },
+          "elements": [
+            {
+              "id": "map_widget",
+              "elType": "widget",
+              "widgetType": "shortcode",
+              "settings": {
+                "shortcode": "[shipment_single]"
+              }
+            }
+          ]
+        },
+        {
+          "id": "column_right",
+          "elType": "column",
+          "settings": {
+            "_column_size": 40
+          },
+          "elements": [
+            {
+              "id": "shipment_title",
+              "elType": "widget",
+              "widgetType": "heading",
+              "settings": {
+                "title": "{{post_title}}",
+                "size": "xl"
+              }
+            },
+            {
+              "id": "divider1",
+              "elType": "widget",
+              "widgetType": "divider",
+              "settings": {}
+            },
+            {
+              "id": "tracking_text",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "editor": "<strong>Tracking Number:</strong> {{acf:_shipment_tracking_number}}"
+              }
+            },
+            {
+              "id": "status_text",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "editor": "<strong>Status:</strong> {{acf:_shipment_status}}"
+              }
+            },
+            {
+              "id": "divider2",
+              "elType": "widget",
+              "widgetType": "divider",
+              "settings": {}
+            },
+            {
+              "id": "timeline_heading",
+              "elType": "widget",
+              "widgetType": "heading",
+              "settings": {
+                "title": "Route Timeline",
+                "size": "medium"
+              }
+            },
+            {
+              "id": "timeline_shortcode",
+              "elType": "widget",
+              "widgetType": "shortcode",
+              "settings": {
+                "shortcode": "[shipment_timeline]"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
